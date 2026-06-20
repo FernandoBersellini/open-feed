@@ -33,7 +33,7 @@ Endpoint base: posts/
 
 Criar um post
 ```
-api/v1/posts/criar-postagem
+api/v1/posts/criar-postagem/{userId}
 ```
 
 Retornar posts
@@ -43,12 +43,12 @@ api/v1/posts/retornar-postagens
 
 Atualizar post
 ```
-api/v1/posts/atualizar-postagem/{id}
+api/v1/posts/atualizar-postagem/{postId}
 ```
 
 Deleter post
 ```
-api/v1/posts/deletar-postagem/{id}
+api/v1/posts/deletar-postagem/{id}/?idUsuario=
 ```
 
 DTOs:
@@ -85,7 +85,7 @@ Atualizar post:
 ---
 ### Users
 
-Endpoint base: auth/
+Endpoint base de autenticacao: auth/
 
 Criar uma conta
 ```
