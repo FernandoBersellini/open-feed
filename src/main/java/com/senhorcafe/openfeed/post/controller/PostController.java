@@ -17,9 +17,9 @@ import java.util.List;
 public class PostController {
     private final PostService postService;
     
-    @GetMapping("retornar-postagens")
-    public ResponseEntity<List<PostDTO>> index() {
-        return postService.postIndex();
+    @GetMapping("retornar-postagens/{id}")
+    public ResponseEntity<List<PostDTO>> index(@PathVariable Long id) {
+        return postService.postIndex(id);
     }
 
     @PostMapping("criar-postagem")
@@ -33,8 +33,8 @@ public class PostController {
     }
 
     @DeleteMapping("deletar-postagem/{id}")
-    public ResponseEntity<String> delete(@PathVariable Long id) {
-        return postService.deletePost(id);
+    public ResponseEntity<String> delete(@PathVariable Long id, @RequestParam Long idUsuario) {
+        return postService.deletePost(id, idUsuario);
     }
 
 }

@@ -6,6 +6,8 @@ import com.senhorcafe.openfeed.post.dto.PostDTO;
 import com.senhorcafe.openfeed.post.entity.Post;
 import com.senhorcafe.openfeed.post.repository.PostRepository;
 import com.senhorcafe.openfeed.post.tags.Tags;
+import com.senhorcafe.openfeed.user.entity.User;
+import com.senhorcafe.openfeed.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,16 +22,18 @@ public class PostService {
     private static final String TAG_INVALIDA = "Tag invalida";
 
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
-    public ResponseEntity<List<PostDTO>> postIndex() {
-        List<Post> postsFromBackend = postRepository.findAll();
+    public ResponseEntity<List<PostDTO>> postIndex(Long userId) {
+        List<Post> postsFromBackend = postRepository.findAllByUserId(userId);
 
         if (postsFromBackend.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
 
-        List<PostDTO> posts = postRepository.findAll().stream()
+        List<PostDTO> posts = postsFromBackend.stream()
             .map(post -> new PostDTO(
+                post.getId(),
                 post.getTitulo(),
                 post.getConteudo(),
                 post.getTag(),
@@ -42,9 +46,16 @@ public class PostService {
     }
 
     public ResponseEntity<String> createPost(CriarPostDTO criarPostDTO) {
+        Optional<User> userOptional = userRepository.findById(criarPostDTO.idUsuario());
+
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario nao encontrado");
+        }
+
         Post post = new Post();
         post.setTitulo(criarPostDTO.titulo());
         post.setConteudo(criarPostDTO.conteudo());
+        post.setUser(userOptional.get());
 
         String tagSanitizada = sanitizeTag(criarPostDTO.tag());
 
@@ -68,6 +79,10 @@ public class PostService {
 
         Post post = postOptional.get();
 
+        if (!post.getUser().getId().equals(atualizarPostDTO.idUsuario())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Este post nao pertence ao usuario informado");
+        }
+
         if (atualizarPostDTO.titulo() != null) {
             post.setTitulo(atualizarPostDTO.titulo());
         }
@@ -89,11 +104,15 @@ public class PostService {
         return ResponseEntity.status(HttpStatus.OK).body("Post atualizado");
     }
 
-    public ResponseEntity<String> deletePost(Long postId) {
+    public ResponseEntity<String> deletePost(Long postId, Long idUsuario) {
         Optional<Post> postOptional = postRepository.findById(postId);
 
         if (postOptional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        if (!postOptional.get().getUser().getId().equals(idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Este post nao pertence ao usuario informado");
         }
 
         postRepository.deleteById(postId);

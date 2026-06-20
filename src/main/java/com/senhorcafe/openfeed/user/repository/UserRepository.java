@@ -1,4 +1,8 @@
 package com.senhorcafe.openfeed.user.repository;
 
-public interface UserRepository {
+import com.senhorcafe.openfeed.user.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface UserRepository extends JpaRepository<User, Long> {
+    User findByEmail(String email);
 }

@@ -1,9 +1,12 @@
 package com.senhorcafe.openfeed.post.entity;
 
 import com.senhorcafe.openfeed.post.tags.Tags;
+import com.senhorcafe.openfeed.user.entity.User;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -28,4 +31,10 @@ public class Post {
     @Nullable
     @Column(name = "tag")
     private String tag;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User user;
 }
