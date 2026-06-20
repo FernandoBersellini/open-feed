@@ -1,4 +1,5 @@
-- App  de posts simples, com comentarios e likes, e usuarios
+# Openfeed
+- App  de posts simples
 # MVP
 Entrar com uma conta, e poder fazer postagens com tags especificas
 ## Backend
@@ -7,52 +8,53 @@ Entrar com uma conta, e poder fazer postagens com tags especificas
 - Autenticacao de usuario: Lookup simples no banco de dados;
 ### Entidades
 
-Post
-id_post: numerico (PK)
-titulo: string
-conteudo: string
-data_postagem: date
-tags: array de tags (pode ser um enum do banco de dados)
+Post  
+id_post: numerico (PK)  
+titulo: string  
+conteudo: string  
+data_postagem: date  
+tags: array de tags (pode ser um enum do banco de dados)  
 id_user: numero (FK)
 
-User
-id_user: numerico (PK)
-username: string
-email: string
+User  
+id_user: numerico (PK)  
+username: string  
+email: string  
 senha: string (criptografada no banco de dados)
 
 Tags disponiveis:
 Videogames, Cinema, Esportes, Lazer, Comida, Viagens
 
-### Endpoints
-Convencao de nomeacao: kebab-case
-Endpoint base: api/v1
+### Endpoints 
+Convencao de nomeacao: kebab-case  
+Endpoint base global: api/v1
 ### Posts
+Endpoint base: posts/
 
 Criar um post
 ```
-api/v1/criar-postagem
+api/v1/posts/criar-postagem
 ```
 
 Retornar posts
 ```
-api/v1/retornar-postagens
+api/v1/posts/retornar-postagens
 ```
 
 Atualizar post
 ```
-api/v1/atualizar-postagem/{id}
+api/v1/posts/atualizar-postagem/{id}
 ```
 
 Deleter post
 ```
-api/v1/deletar-postagem/{id}
+api/v1/posts/deletar-postagem/{id}
 ```
 
 DTOs:
 
 Criar post:
-```json
+```
 {
 	//Obrigatorio, minimo de 5 caracteres, maximo de 100 caracteres, string
 	"titulo":string,
@@ -61,12 +63,12 @@ Criar post:
 	"conteudo":string,
 	
 	//Opcional, deve ser compativel com as tags disponiveis
-	"tags": string[]
+	"tag": string
 }
 ```
 
 Atualizar post:
-```json
+```
 {
 	//Opcional, minimo de 5 caracteres, maximo de 100 caracteres, string
 	"titulo":string,
@@ -75,13 +77,15 @@ Atualizar post:
 	"conteudo":string,
 	
 	//Opcional, deve ser compativel com as tags disponiveis
-	"tags": string[]
+	"tag": string
 }
 
 ```
 
 ---
 ### Users
+
+Endpoint base: auth/
 
 Criar uma conta
 ```
@@ -96,7 +100,7 @@ api/v1/entrar
 DTOs:
 
 Criar conta:
-```json
+```
 {
 	//opcional, string, min 5 caracteres, max 15
 	"username":string,
@@ -110,7 +114,7 @@ Criar conta:
 ```
 
 Entrar:
-```json
+```
 {
 	//obrigatorio, email
 	"email":string,
@@ -138,7 +142,8 @@ Entrar:
 ---
 ## Convencoes gerais
 
-Padrao de nomeacao: camelCase
+Padrao de nomeacao: camelCase  
+Idioma: Portugues
 
 
 
