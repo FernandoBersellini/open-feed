@@ -27,10 +27,6 @@ public class PostService {
     public ResponseEntity<List<PostDTO>> postIndex(Long userId) {
         List<Post> postsFromBackend = postRepository.findAllByUserId(userId);
 
-        if (postsFromBackend.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
-
         List<PostDTO> posts = postsFromBackend.stream()
             .map(post -> new PostDTO(
                 post.getId(),
@@ -40,8 +36,7 @@ public class PostService {
                 post.getDataPostagem().toString()
             ))
             .toList();
-
-
+        
         return ResponseEntity.ok(posts);
     }
 
