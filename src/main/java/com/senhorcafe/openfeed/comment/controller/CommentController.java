@@ -4,7 +4,6 @@ import com.senhorcafe.openfeed.comment.dto.ComentarioDTO;
 import com.senhorcafe.openfeed.comment.dto.CriarComentarioDTO;
 import com.senhorcafe.openfeed.comment.dto.EditarComentarioDTO;
 import com.senhorcafe.openfeed.comment.service.CommentService;
-import com.senhorcafe.openfeed.post.dto.AtualizarPostDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,13 +27,13 @@ public class CommentController {
         return commentService.createComment(postId, criarComentarioDTO);
     }
 
-    @PatchMapping("editar-comentario/{commentId}/")
-    public ResponseEntity<String> patch(@PathVariable Long commentId, @RequestParam Long idUsuario, @Valid  @RequestBody EditarComentarioDTO editarComentarioDTO) {
-        return commentService.updateComment(commentId, idUsuario, editarComentarioDTO);
+    @PatchMapping("editar-comentario/{commentId}")
+    public ResponseEntity<String> patch(@PathVariable Long commentId, @Valid @RequestBody EditarComentarioDTO editarComentarioDTO) {
+        return commentService.updateComment(commentId, editarComentarioDTO);
     }
 
-    @DeleteMapping("deletar-comentario/{commentId}/")
-    public ResponseEntity<String> delete(@PathVariable Long commentId, @RequestParam Long idUsuario) {
-        return commentService.deleteComment(commentId, idUsuario);
+    @DeleteMapping("deletar-comentario/{commentId}")
+    public ResponseEntity<String> delete(@PathVariable Long commentId) {
+        return commentService.deleteComment(commentId);
     }
 }

@@ -1,8 +1,9 @@
 package com.senhorcafe.openfeed.user.service;
 
+import com.senhorcafe.openfeed.config.JwtService;
+import com.senhorcafe.openfeed.user.dto.AuthResponseDTO;
 import com.senhorcafe.openfeed.user.dto.SignInDTO;
 import com.senhorcafe.openfeed.user.dto.SignUpDTO;
-import com.senhorcafe.openfeed.user.dto.UserDTO;
 import com.senhorcafe.openfeed.user.entity.User;
 import com.senhorcafe.openfeed.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +17,12 @@ import org.springframework.stereotype.Service;
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    public ResponseEntity<String> signUp(SignUpDTO signUpDTO) {
+    public ResponseEntity<AuthResponseDTO> signUp(SignUpDTO signUpDTO) {
         User user = new User();
         user.setEmail(signUpDTO.email());
-
-        String encodedPassword = passwordEncoder.encode(signUpDTO.password());
-        user.setPassword(encodedPassword);
+        user.setPassword(passwordEncoder.encode(signUpDTO.password()));
 
         if (signUpDTO.username() != null) {
             user.setUsername(signUpDTO.username());
@@ -30,7 +30,8 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body("Conta criada com sucesso");
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponseDTO(token, user.getId(), user.getEmail(), user.getUsername()));
     }
 
     public ResponseEntity<?> signIn(SignInDTO signInDTO) {
@@ -40,13 +41,11 @@ public class AuthService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email ou senha invalidos");
         }
 
-        if(passwordEncoder.matches(signInDTO.password(), user.getPassword())) {
-            UserDTO userInfo = new UserDTO(user.getId(), user.getEmail(), user.getUsername());
-
-            return ResponseEntity.status(HttpStatus.OK).body(userInfo);
-
-        } else {
+        if (!passwordEncoder.matches(signInDTO.password(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email ou senha invalidos");
         }
+
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getUsername());
+        return ResponseEntity.ok(new AuthResponseDTO(token, user.getId(), user.getEmail(), user.getUsername()));
     }
 }

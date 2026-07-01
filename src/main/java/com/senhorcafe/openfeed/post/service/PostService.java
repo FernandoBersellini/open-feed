@@ -11,6 +11,7 @@ import com.senhorcafe.openfeed.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,12 +37,13 @@ public class PostService {
                 post.getDataPostagem().toString()
             ))
             .toList();
-        
+
         return ResponseEntity.ok(posts);
     }
 
     public ResponseEntity<String> createPost(CriarPostDTO criarPostDTO) {
-        Optional<User> userOptional = userRepository.findById(criarPostDTO.idUsuario());
+        Long userId = getAuthenticatedUserId();
+        Optional<User> userOptional = userRepository.findById(userId);
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario nao encontrado");
@@ -59,13 +61,13 @@ public class PostService {
         }
 
         post.setTag(tagSanitizada);
-
         postRepository.save(post);
 
         return ResponseEntity.status(HttpStatus.CREATED).body("Post salvo com sucesso");
     }
 
     public ResponseEntity<String> updatePost(Long postId, AtualizarPostDTO atualizarPostDTO) {
+        Long userId = getAuthenticatedUserId();
         Optional<Post> postOptional = postRepository.findById(postId);
 
         if (postOptional.isEmpty()) {
@@ -74,7 +76,7 @@ public class PostService {
 
         Post post = postOptional.get();
 
-        if (!post.getUser().getId().equals(atualizarPostDTO.idUsuario())) {
+        if (!post.getUser().getId().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Este post nao pertence ao usuario informado");
         }
 
@@ -99,14 +101,15 @@ public class PostService {
         return ResponseEntity.status(HttpStatus.OK).body("Post atualizado");
     }
 
-    public ResponseEntity<String> deletePost(Long postId, Long idUsuario) {
+    public ResponseEntity<String> deletePost(Long postId) {
+        Long userId = getAuthenticatedUserId();
         Optional<Post> postOptional = postRepository.findById(postId);
 
         if (postOptional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        if (!postOptional.get().getUser().getId().equals(idUsuario)) {
+        if (!postOptional.get().getUser().getId().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Este post nao pertence ao usuario informado");
         }
 
@@ -125,5 +128,9 @@ public class PostService {
         } catch (IllegalArgumentException e) {
             return "Tag invalida";
         }
+    }
+
+    private Long getAuthenticatedUserId() {
+        return (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 }

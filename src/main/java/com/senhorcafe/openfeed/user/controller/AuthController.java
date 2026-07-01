@@ -22,7 +22,7 @@ public class AuthController {
     }
 
     @PostMapping("criar-conta")
-    public ResponseEntity<String> signUp(@RequestBody SignUpDTO signUpDTO) {
+    public ResponseEntity<?> signUp(@RequestBody SignUpDTO signUpDTO) {
         return authService.signUp(signUpDTO);
     }
 }

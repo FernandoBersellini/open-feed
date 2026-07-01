@@ -5,7 +5,6 @@ import com.senhorcafe.openfeed.comment.dto.CriarComentarioDTO;
 import com.senhorcafe.openfeed.comment.dto.EditarComentarioDTO;
 import com.senhorcafe.openfeed.comment.entity.Comment;
 import com.senhorcafe.openfeed.comment.repository.CommentRepository;
-import com.senhorcafe.openfeed.post.dto.AtualizarPostDTO;
 import com.senhorcafe.openfeed.post.entity.Post;
 import com.senhorcafe.openfeed.post.repository.PostRepository;
 import com.senhorcafe.openfeed.user.entity.User;
@@ -13,9 +12,9 @@ import com.senhorcafe.openfeed.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,9 +40,10 @@ public class CommentService {
         return ResponseEntity.ok(comentarios);
     }
 
-    public ResponseEntity<String> createComment(Long id, CriarComentarioDTO criarComentarioDTO) {
-        Optional<Post> postOptional = postRepository.findById(id);
-        Optional<User> userOptional = userRepository.findById(criarComentarioDTO.idUsuario());
+    public ResponseEntity<String> createComment(Long postId, CriarComentarioDTO criarComentarioDTO) {
+        Long userId = getAuthenticatedUserId();
+        Optional<Post> postOptional = postRepository.findById(postId);
+        Optional<User> userOptional = userRepository.findById(userId);
 
         if (postOptional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Post nao encontrado");
@@ -61,14 +61,15 @@ public class CommentService {
         return ResponseEntity.status(HttpStatus.CREATED).body("Comentario criado com sucesso");
     }
 
-    public ResponseEntity<String> updateComment(Long commentId, Long idUsuario , EditarComentarioDTO editarComentarioDTO) {
+    public ResponseEntity<String> updateComment(Long commentId, EditarComentarioDTO editarComentarioDTO) {
+        Long userId = getAuthenticatedUserId();
         Optional<Comment> commentOptional = commentRepository.findById(commentId);
 
         if (commentOptional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Comentario nao encontrado");
         }
 
-        if (!commentOptional.get().getUser().getId().equals(idUsuario)) {
+        if (!commentOptional.get().getUser().getId().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Este comentario nao pertence ao usuario informado");
         }
 
@@ -83,14 +84,15 @@ public class CommentService {
         return ResponseEntity.status(HttpStatus.OK).body("Comentario atualizado com sucesso");
     }
 
-    public ResponseEntity<String> deleteComment(Long commentId, Long idUsuario) {
+    public ResponseEntity<String> deleteComment(Long commentId) {
+        Long userId = getAuthenticatedUserId();
         Optional<Comment> commentOptional = commentRepository.findById(commentId);
 
         if (commentOptional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Comentario nao encontrado");
         }
 
-        if (!commentOptional.get().getUser().getId().equals(idUsuario)) {
+        if (!commentOptional.get().getUser().getId().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Este comentario nao pertence ao usuario informado");
         }
 
@@ -98,4 +100,7 @@ public class CommentService {
         return ResponseEntity.status(HttpStatus.OK).body("Comentario deletado com sucesso");
     }
 
+    private Long getAuthenticatedUserId() {
+        return (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
 }

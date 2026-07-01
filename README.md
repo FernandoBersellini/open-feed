@@ -9,12 +9,13 @@ Entrar com uma conta e poder fazer postagens com tags específicas.
 ## Features
 - Postagens
 - Comentarios
+- Autenticação JWT
 
 ## Backend
 
 - Spring
 - Postgres com Supabase
-- Autenticação de usuário: lookup simples no banco de dados
+- Autenticação de usuário: JWT (Bearer Token)
 
 ### Entidades
 
@@ -76,7 +77,7 @@ api/v1/posts/atualizar-postagem/{postId}
 
 Deletar post:
 ```
-api/v1/posts/deletar-postagem/{postId}/?idUsuario={userId}
+api/v1/posts/deletar-postagem/{postId}
 ```
 
 **DTOs**
@@ -127,12 +128,12 @@ api/v1/comentarios/retornar-comentarios/{postId}
 
 Editar um comentario:
 ```
-api/v1/comentarios/editar-comentario/{commentId}/?idUsuario={userId}
+api/v1/comentarios/editar-comentario/{commentId}
 ```
 
 Deletar um comentario:
 ```
-api/v1/comentarios/deletar-comentario/{commentId}/?idUsuario={userId}
+api/v1/comentarios/deletar-comentario/{commentId}
 ```
 
 **DTOs**
@@ -141,10 +142,7 @@ Fazer um comentario:
 ```jsonc
 {
 	// Obrigatório, mínimo de 1 caractere, máximo de 250, string
-	"conteudo": string,
-
-	// Obrigatório, numérico
-	"idUsuario": number
+	"conteudo": string
 }
 ```
 
@@ -184,7 +182,7 @@ Criar conta:
 	"email": string,
 
 	// Obrigatório, string, mín. 8 caracteres, máx. 25
-	"senha": string
+	"password": string
 }
 ```
 
@@ -195,9 +193,35 @@ Entrar:
 	"email": string,
 
 	// Obrigatório, string
-	"senha": string
+	"password": string
 }
 ```
+
+Resposta (ambos os endpoints):
+```jsonc
+{
+	"token": string,
+	"id": number,
+	"email": string,
+	"username": string
+}
+```
+
+---
+
+### Autenticação
+
+Os endpoints de criação, edição e deleção de posts e comentários exigem um token JWT válido no header:
+
+```
+Authorization: Bearer <token>
+```
+
+Endpoints públicos (sem token necessário):
+- `POST api/v1/auth/entrar`
+- `POST api/v1/auth/criar-conta`
+- `GET api/v1/posts/retornar-postagens/{userId}`
+- `GET api/v1/comentarios/retornar-comentarios/{postId}`
 
 ---
 
