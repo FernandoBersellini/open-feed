@@ -1,5 +1,6 @@
 package com.senhorcafe.openfeed.user.entity;
 
+import com.senhorcafe.openfeed.comment.entity.Comment;
 import com.senhorcafe.openfeed.post.entity.Post;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
@@ -31,5 +32,10 @@ public class User {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Post> posts;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Comment> comments;
 
 }

@@ -1,5 +1,6 @@
 package com.senhorcafe.openfeed.post.entity;
 
+import com.senhorcafe.openfeed.comment.entity.Comment;
 import com.senhorcafe.openfeed.post.tags.Tags;
 import com.senhorcafe.openfeed.user.entity.User;
 import jakarta.annotation.Nullable;
@@ -10,6 +11,7 @@ import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Data
@@ -37,4 +39,9 @@ public class Post {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private User user;
+
+    @OneToMany(mappedBy = "post", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Comment> comments;
 }

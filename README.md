@@ -6,6 +6,10 @@ App de posts simples.
 
 Entrar com uma conta e poder fazer postagens com tags específicas.
 
+## Features
+- Postagens
+- Comentarios
+
 ## Backend
 
 - Spring
@@ -16,14 +20,14 @@ Entrar com uma conta e poder fazer postagens com tags específicas.
 
 **Post**
 
-| Campo | Tipo |
-| --- | --- |
-| id_post | numérico (PK) |
-| titulo | string |
-| conteudo | string |
-| data_postagem | date |
+| Campo | Tipo                                               |
+| --- |----------------------------------------------------|
+| id_post | numérico (PK)                                      |
+| titulo | string                                             |
+| conteudo | string                                             |
+| data_postagem | date (server-set)                                  |
 | tags | array de tags (pode ser um enum do banco de dados) |
-| id_user | numérico (FK) |
+| id_user | numérico (FK)                                      |
 
 **User**
 
@@ -35,6 +39,16 @@ Entrar com uma conta e poder fazer postagens com tags específicas.
 | senha | string (criptografada no banco de dados) |
 
 **Tags disponíveis:** Videogames, Cinema, Esportes, Lazer, Comida, Viagens
+
+**Comentario**
+
+| Campo | Tipo |
+| --- | --- |
+| id_comentario | numérico (PK) |
+| conteudo | string |
+| data_comentario | date (server-set) |
+| id_user | numérico (FK) |
+| id_post | numérico (FK) |
 
 ### Endpoints
 
@@ -92,6 +106,53 @@ Atualizar post:
 
 	// Opcional, deve ser compatível com as tags disponíveis
 	"tag": string
+}
+```
+
+---
+
+#### Comentarios
+
+Endpoint base: `comentarios/`
+
+Fazer um comentario:
+```
+api/v1/comentarios/criar-comentario/{postId}
+```
+
+Retornar comentarios:
+```
+api/v1/comentarios/retornar-comentarios/{postId}
+```
+
+Editar um comentario:
+```
+api/v1/comentarios/editar-comentario/{commentId}/?idUsuario={userId}
+```
+
+Deletar um comentario:
+```
+api/v1/comentarios/deletar-comentario/{commentId}/?idUsuario={userId}
+```
+
+**DTOs**
+
+Fazer um comentario:
+```jsonc
+{
+	// Obrigatório, mínimo de 1 caractere, máximo de 250, string
+	"conteudo": string,
+
+	// Obrigatório, numérico
+	"idUsuario": number
+}
+```
+
+Editar um comentario:
+```jsonc
+{
+	// Opcional, mínimo de 1 caractere, máximo de 250, string
+	"conteudo": string
 }
 ```
 
