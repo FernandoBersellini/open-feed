@@ -25,7 +25,7 @@ public class CommentService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
 
-    public ResponseEntity<List<ComentarioDTO>> postIndex(Long id) {
+    public ResponseEntity<List<ComentarioDTO>> commentIndex(Long id) {
         List<Comment> commentsFromDB = commentRepository.findByPostId(id);
 
         List<ComentarioDTO> comentarios = commentsFromDB.stream()

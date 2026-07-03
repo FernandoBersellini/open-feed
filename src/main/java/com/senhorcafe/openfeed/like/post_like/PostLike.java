@@ -1,4 +1,4 @@
-package com.senhorcafe.openfeed.comment.entity;
+package com.senhorcafe.openfeed.like.post_like;
 
 import com.senhorcafe.openfeed.post.entity.Post;
 import com.senhorcafe.openfeed.user.entity.User;
@@ -12,17 +12,11 @@ import java.time.LocalDateTime;
 
 @Entity
 @Data
-@Table(name = "comment")
-public class Comment {
+@Table(name = "post_like", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "post_id"}))
+public class PostLike {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "conteudo")
-    private String conteudo;
-
-    @CreationTimestamp
-    private LocalDateTime dataComentario;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -30,6 +24,10 @@ public class Comment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id")
+
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Post post;
+
+    @CreationTimestamp
+    private LocalDateTime dataCurtida;
 }

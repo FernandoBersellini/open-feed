@@ -110,6 +110,18 @@ Atualizar post:
 }
 ```
 
+Resposta:
+```jsonc
+{
+	"id": integer,
+	"titulo":string,
+	"conteudo": string,
+	"tag": string,
+	"dataPostagem": string
+}
+```
+
+
 ---
 
 #### Comentarios

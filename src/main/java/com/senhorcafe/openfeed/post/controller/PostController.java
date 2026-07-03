@@ -1,5 +1,7 @@
 package com.senhorcafe.openfeed.post.controller;
 
+import com.senhorcafe.openfeed.like.LikeDTO;
+import com.senhorcafe.openfeed.like.LikeService;
 import com.senhorcafe.openfeed.post.dto.AtualizarPostDTO;
 import com.senhorcafe.openfeed.post.dto.CriarPostDTO;
 import com.senhorcafe.openfeed.post.dto.PostDTO;
@@ -16,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PostController {
     private final PostService postService;
+    private final LikeService likeService;
 
     @GetMapping("retornar-postagens/{id}")
     public ResponseEntity<List<PostDTO>> index(@PathVariable Long id) {
@@ -25,6 +28,11 @@ public class PostController {
     @PostMapping("criar-postagem")
     public ResponseEntity<String> post(@Valid @RequestBody CriarPostDTO criarPostDTO) {
         return postService.createPost(criarPostDTO);
+    }
+
+    @PostMapping("interagir-com-postagem/{id}")
+    public ResponseEntity<LikeDTO> togglePostLike(@PathVariable Long id) {
+        return likeService.togglePostLike(id);
     }
 
     @PatchMapping("atualizar-postagem/{id}")
