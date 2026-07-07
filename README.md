@@ -10,6 +10,7 @@ Entrar com uma conta e poder fazer postagens com tags específicas.
 - Postagens
 - Comentarios
 - Autenticação JWT
+- Curtidas (likes) em postagens e comentários
 
 ## Backend
 
@@ -80,6 +81,11 @@ Deletar post:
 api/v1/posts/deletar-postagem/{postId}
 ```
 
+Curtir/descurtir um post (toggle):
+```
+api/v1/posts/interagir-com-postagem/{postId}
+```
+
 **DTOs**
 
 Criar post:
@@ -110,16 +116,30 @@ Atualizar post:
 }
 ```
 
-Resposta:
+Resposta (retornar posts):
 ```jsonc
 {
 	"id": integer,
 	"titulo":string,
 	"conteudo": string,
 	"tag": string,
-	"dataPostagem": string
+	"dataPostagem": string,
+	"totalLikes": number,
+	"usuarioAtualCurtiu": boolean
 }
 ```
+
+`usuarioAtualCurtiu` reflete o usuário autenticado que fez a requisição (`false` se não autenticado).
+
+Resposta de curtir/descurtir post:
+```jsonc
+{
+	"totalLikes": number,
+	"usuarioAtualCurtiu": boolean
+}
+```
+
+Deletar um post remove em cascata (via `ON DELETE CASCADE` no banco) seus comentários, curtidas do post e curtidas dos comentários associados.
 
 
 ---
@@ -148,6 +168,11 @@ Deletar um comentario:
 api/v1/comentarios/deletar-comentario/{commentId}
 ```
 
+Curtir/descurtir um comentario (toggle):
+```
+api/v1/comentarios/interagir-com-comentario/{commentId}
+```
+
 **DTOs**
 
 Fazer um comentario:
@@ -165,6 +190,29 @@ Editar um comentario:
 	"conteudo": string
 }
 ```
+
+Resposta (retornar comentarios):
+```jsonc
+{
+	"idComentario": integer,
+	"conteudo": string,
+	"dataComentario": string,
+	"idUsuario": integer,
+	"username": string,
+	"totalLikes": number,
+	"usuarioAtualCurtiu": boolean
+}
+```
+
+Resposta de curtir/descurtir comentario:
+```jsonc
+{
+	"totalLikes": number,
+	"usuarioAtualCurtiu": boolean
+}
+```
+
+Deletar um comentario remove em cascata (via `ON DELETE CASCADE` no banco) suas curtidas associadas.
 
 ---
 
@@ -223,7 +271,7 @@ Resposta (ambos os endpoints):
 
 ### Autenticação
 
-Os endpoints de criação, edição e deleção de posts e comentários exigem um token JWT válido no header:
+Os endpoints de criação, edição, deleção e curtida de posts e comentários exigem um token JWT válido no header:
 
 ```
 Authorization: Bearer <token>
@@ -234,6 +282,20 @@ Endpoints públicos (sem token necessário):
 - `POST api/v1/auth/criar-conta`
 - `GET api/v1/posts/retornar-postagens/{userId}`
 - `GET api/v1/comentarios/retornar-comentarios/{postId}`
+
+---
+
+### Tratamento de erros
+
+Erros não tratados diretamente por um endpoint são capturados por um `GlobalExceptionHandler` central, que padroniza a resposta:
+
+| Situação | Status |
+| --- | --- |
+| Tag inválida ao criar/atualizar um post | `400 Bad Request` |
+| Post/comentario não pertence ao usuário autenticado | `403 Forbidden` |
+| Recurso não encontrado | `404 Not Found` |
+| Violação de integridade de dados (ex: conflito de curtida duplicada) | `409 Conflict` |
+| Erro interno não mapeado | `500 Internal Server Error` |
 
 ---
 

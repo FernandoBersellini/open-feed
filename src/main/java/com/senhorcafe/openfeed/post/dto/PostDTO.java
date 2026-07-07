@@ -5,5 +5,7 @@ public record PostDTO(
     String titulo,
     String conteudo,
     String tag,
-    String dataPostagem
+    String dataPostagem,
+    long totalLikes,
+    boolean usuarioAtualCurtiu
 ) {}

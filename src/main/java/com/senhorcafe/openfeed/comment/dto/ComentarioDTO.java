@@ -7,5 +7,7 @@ public record ComentarioDTO(
     String conteudo,
     LocalDateTime dataComentario,
     Long idUsuario,
-    String username
+    String username,
+    long totalLikes,
+    boolean usuarioAtualCurtiu
 ) {}

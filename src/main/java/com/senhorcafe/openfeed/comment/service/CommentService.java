@@ -5,6 +5,7 @@ import com.senhorcafe.openfeed.comment.dto.CriarComentarioDTO;
 import com.senhorcafe.openfeed.comment.dto.EditarComentarioDTO;
 import com.senhorcafe.openfeed.comment.entity.Comment;
 import com.senhorcafe.openfeed.comment.repository.CommentRepository;
+import com.senhorcafe.openfeed.like.comment_like.CommentLikeRepository;
 import com.senhorcafe.openfeed.post.entity.Post;
 import com.senhorcafe.openfeed.post.repository.PostRepository;
 import com.senhorcafe.openfeed.user.entity.User;
@@ -24,9 +25,11 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final CommentLikeRepository commentLikeRepository;
 
     public ResponseEntity<List<ComentarioDTO>> commentIndex(Long id) {
         List<Comment> commentsFromDB = commentRepository.findByPostId(id);
+        Long authenticatedUserId = getOptionalAuthenticatedUserId();
 
         List<ComentarioDTO> comentarios = commentsFromDB.stream()
                 .map(comment -> new ComentarioDTO(
@@ -34,9 +37,10 @@ public class CommentService {
                         comment.getConteudo(),
                         comment.getDataComentario(),
                         comment.getUser().getId(),
-                        comment.getUser().getUsername()
+                        comment.getUser().getUsername(),
+                        commentLikeRepository.countByCommentId(comment.getId()),
+                        authenticatedUserId != null && commentLikeRepository.findByUserIdAndCommentId(authenticatedUserId, comment.getId()).isPresent()
                 )).toList();
-
         return ResponseEntity.ok(comentarios);
     }
 
@@ -102,5 +106,13 @@ public class CommentService {
 
     private Long getAuthenticatedUserId() {
         return (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    private Long getOptionalAuthenticatedUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication() != null
+            ? SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+            : null;
+
+        return principal instanceof Long ? (Long) principal : null;
     }
 }
