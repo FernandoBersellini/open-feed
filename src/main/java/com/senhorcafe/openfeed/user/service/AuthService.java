@@ -21,7 +21,15 @@ public class AuthService {
     private final JwtService jwtService;
     private final TokenDenylist tokenDenylist;
 
-    public ResponseEntity<AuthResponseDTO> signUp(SignUpDTO signUpDTO) {
+    public ResponseEntity<?> signUp(SignUpDTO signUpDTO) {
+        if (userRepository.existsByEmail(signUpDTO.email())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Email ja cadastrado");
+        }
+
+        if (signUpDTO.username() != null && userRepository.existsByUsername(signUpDTO.username())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Username ja cadastrado");
+        }
+
         User user = new User();
         user.setEmail(signUpDTO.email());
         user.setPassword(passwordEncoder.encode(signUpDTO.password()));

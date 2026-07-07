@@ -326,22 +326,26 @@ Erros não tratados diretamente por um endpoint são capturados por um `GlobalEx
 
 ---
 
-## Frontend
+## Decisões de arquitetura
 
-- React
-- Vite
-- Tailwind
-- Axios
+**Rate limiting no login e cadastro**
+- Contexto: `auth/entrar` e `auth/criar-conta` são públicos (`permitAll`) e, antes desta mudança, não tinham nenhuma proteção contra força bruta ou spam de contas.
+- Decisão: limitar por IP do cliente com Bucket4j — 5 req/min em `entrar`, 3 req/hora em `criar-conta`. Detalhes de comportamento em [Autenticação](#autenticação).
+- Consequência conhecida: os contadores são mantidos em memória por instância da aplicação. Em caso de múltiplas instâncias atrás de um load balancer, cada uma tem seus próprios contadores (os limites efetivos multiplicam pelo número de instâncias). Além disso, se a aplicação for hospedada atrás de um proxy reverso, `getRemoteAddr()` passa a retornar o IP do proxy para todas as requisições — ainda **não configurado**, pendente da escolha da plataforma de deploy (precisa de `server.forward-headers-strategy` + lista de proxies confiáveis).
 
-### Mapa do app
+**Revogação de token (logout)**
+- Contexto: os JWTs são stateless — antes desta mudança, não havia como invalidar um token antes da sua expiração natural (1h).
+- Decisão: `POST auth/sair` adiciona o `jti` do token a uma denylist em memória (`TokenDenylist`) com TTL até a expiração original do token; `JwtFilter` rejeita qualquer token cujo `jti` esteja na denylist. Detalhes em [Autenticação](#autenticação).
+- Consequência conhecida: assim como o rate limiting, a denylist é por instância — não persiste a reinícios nem é compartilhada entre múltiplas instâncias.
 
-- Iniciar com página de login / criar conta
-- Entrar no feed pessoal
+**Validação de duplicidade no cadastro**
+- Contexto: `signUp` inseria o usuário diretamente e dependia da constraint `UNIQUE` do banco lançar `DataIntegrityViolationException`, traduzida pelo `GlobalExceptionHandler` num `409` genérico que não indicava qual campo conflitava.
+- Decisão: `AuthService.signUp` agora verifica `existsByEmail`/`existsByUsername` antes de criar o usuário, retornando `409 Conflict` com mensagem específica (`"Email ja cadastrado"` / `"Username ja cadastrado"`).
 
-### Hooks
-
-- Hook de autenticação
-- Hook para postagens
+**Migrações de banco de dados (Flyway)**
+- Contexto: `spring.jpa.hibernate.ddl-auto=update` deixava o schema do Supabase (produção) sujeito a alterações automáticas a cada mudança de entidade JPA, sem revisão nem histórico.
+- Decisão: adotado Flyway. `ddl-auto` mudou para `validate` — Hibernate passa a apenas conferir se o schema bate com as entidades, nunca alterá-lo. O schema já existente no Supabase foi documentado em `src/main/resources/db/migration/V1__baseline_schema.sql` (reconstruído a partir das entidades JPA, não extraído diretamente do banco) e marcado como baseline (`spring.flyway.baseline-on-migrate=true`, `spring.flyway.baseline-version=1`), então essa migração nunca roda contra o banco de produção — ela existe como referência e para inicializar um banco novo/vazio (dev, testes) do zero.
+- Consequência: qualquer alteração de schema futura exige uma nova migração versionada (`V2__...sql`, etc.) em `src/main/resources/db/migration`. Se o schema real do Supabase divergir do que está documentado no baseline, vale a pena conferir com uma ferramenta como `pg_dump`.
 
 ---
 
