@@ -230,6 +230,11 @@ Entrar no sistema:
 api/v1/auth/entrar
 ```
 
+Sair do sistema (invalida o token atual):
+```
+api/v1/auth/sair
+```
+
 **DTOs**
 
 Criar conta:
@@ -257,7 +262,7 @@ Entrar:
 }
 ```
 
-Resposta (ambos os endpoints):
+Resposta (entrar/criar-conta):
 ```jsonc
 {
 	"token": string,
@@ -265,6 +270,11 @@ Resposta (ambos os endpoints):
 	"email": string,
 	"username": string
 }
+```
+
+Resposta (sair):
+```jsonc
+"Logout realizado com sucesso"
 ```
 
 ---
@@ -282,6 +292,23 @@ Endpoints públicos (sem token necessário):
 - `POST api/v1/auth/criar-conta`
 - `GET api/v1/posts/retornar-postagens/{userId}`
 - `GET api/v1/comentarios/retornar-comentarios/{postId}`
+
+**Logout / revogação de token**
+
+`POST api/v1/auth/sair` exige um token válido no header `Authorization`. O id do token (`jti`) é adicionado a uma denylist em memória com TTL até o horário de expiração original do token; qualquer requisição subsequente com esse mesmo token passa a receber `401 Unauthorized`, mesmo que ele ainda não tenha expirado. Fazer login novamente gera um token novo (`jti` diferente), não afetado pelo logout anterior.
+
+A denylist é mantida apenas em memória por instância da aplicação — não persiste a reinícios e não é compartilhada entre múltiplas instâncias.
+
+**Rate limiting**
+
+Para mitigar força bruta e spam de contas, `POST api/v1/auth/entrar` e `POST api/v1/auth/criar-conta` são limitados por IP do cliente (Bucket4j):
+
+| Endpoint | Limite |
+| --- | --- |
+| `auth/entrar` | 5 requisições / minuto |
+| `auth/criar-conta` | 3 requisições / hora |
+
+Ao exceder o limite, a resposta é `429 Too Many Requests` com um header `Retry-After` (em segundos). Assim como a denylist de tokens, os contadores são mantidos em memória por instância.
 
 ---
 
