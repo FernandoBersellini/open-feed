@@ -35,7 +35,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/auth/entrar", "/auth/criar-conta").permitAll()
-                .requestMatchers(HttpMethod.GET, "/posts/retornar-postagens/**", "/comentarios/retornar-comentarios/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/posts/retornar-postagens/**", "/comentarios/retornar-comentarios/**","/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
@@ -43,7 +43,6 @@ public class SecurityConfig {
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(rateLimitFilter, JwtFilter.class);
-
         return http.build();
     }
 }

@@ -1,0 +1,12 @@
+target/
+.git/
+.gitattributes
+.idea/
+*.iml
+.vscode/
+docs/
+HELP.md
+README.md
+CLAUDE.md
+.env
+.env.*

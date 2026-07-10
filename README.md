@@ -347,6 +347,11 @@ Erros não tratados diretamente por um endpoint são capturados por um `GlobalEx
 - Decisão: adotado Flyway. `ddl-auto` mudou para `validate` — Hibernate passa a apenas conferir se o schema bate com as entidades, nunca alterá-lo. O schema já existente no Supabase foi documentado em `src/main/resources/db/migration/V1__baseline_schema.sql` (reconstruído a partir das entidades JPA, não extraído diretamente do banco) e marcado como baseline (`spring.flyway.baseline-on-migrate=true`, `spring.flyway.baseline-version=1`), então essa migração nunca roda contra o banco de produção — ela existe como referência e para inicializar um banco novo/vazio (dev, testes) do zero.
 - Consequência: qualquer alteração de schema futura exige uma nova migração versionada (`V2__...sql`, etc.) em `src/main/resources/db/migration`. Se o schema real do Supabase divergir do que está documentado no baseline, vale a pena conferir com uma ferramenta como `pg_dump`.
 
+**Containerização e CI/CD**
+- Contexto: o projeto não tinha Dockerfile, imagem de container nem pipeline de CI/CD — nenhuma forma automatizada de build/validação/publicação existia.
+- Decisão: `Dockerfile` multi-stage (build com `eclipse-temurin:21-jdk-jammy`, runtime com `eclipse-temurin:21-jre-jammy`, usuário non-root, `HEALTHCHECK` via `/api/v1/actuator/health`), `docker-compose.yml` para conveniência local (sem serviço de banco — Postgres permanece externo via Supabase), e dois workflows do GitHub Actions: `ci.yml` (roda testes unitários e build em todo push/PR, excluindo `OpenFeedApplicationTests` por depender de um banco real) e `docker-publish.yml` (builda e publica a imagem no GitHub Container Registry a cada push em `main`, com tags `latest` e SHA curto).
+- Consequência conhecida: assim como o rate limiting e a denylist de tokens, a aplicação deve rodar como instância única — nada aqui pressupõe múltiplas réplicas. `OpenFeedApplicationTests` continua fora do CI até existir um perfil de teste próprio (H2/Testcontainers). O deploy em uma plataforma de hospedagem real ainda é uma decisão em aberto, separada deste trabalho.
+
 ---
 
 ## Convenções gerais
