@@ -1,16 +1,13 @@
 package com.senhorcafe.openfeed.user.controller;
 
+import com.senhorcafe.openfeed.config.JwtCookie;
 import com.senhorcafe.openfeed.user.dto.SignInDTO;
 import com.senhorcafe.openfeed.user.dto.SignUpDTO;
 import com.senhorcafe.openfeed.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,7 +26,12 @@ public class AuthController {
     }
 
     @PostMapping("sair")
-    public ResponseEntity<String> signOut(@RequestHeader("Authorization") String authHeader) {
-        return authService.signOut(authHeader);
+    public ResponseEntity<String> signOut(@CookieValue(JwtCookie.NAME) String token) {
+        return authService.signOut(token);
+    }
+
+    @GetMapping("me")
+    public ResponseEntity<?> getCurrentUser() {
+        return authService.retrieveUser();
     }
 }

@@ -52,7 +52,7 @@ public class JwtService {
             getClaims(token);
             return true;
         } catch (Exception e) {
-            return false;
+            throw new InvalidTokenException("Token invalido", e);
         }
     }
 

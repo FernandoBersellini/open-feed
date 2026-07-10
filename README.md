@@ -235,6 +235,11 @@ Sair do sistema (invalida o token atual):
 api/v1/auth/sair
 ```
 
+Dados do usuário autenticado:
+```
+api/v1/auth/me
+```
+
 **DTOs**
 
 Criar conta:
@@ -265,27 +270,33 @@ Entrar:
 Resposta (entrar/criar-conta):
 ```jsonc
 {
-	"token": string,
 	"id": number,
 	"email": string,
 	"username": string
 }
 ```
 
+O token JWT não é retornado no corpo — é enviado num cookie `auth_token` (`HttpOnly`, `Secure`, `SameSite=Lax`). Ver [Autenticação](#autenticação).
+
 Resposta (sair):
 ```jsonc
 "Logout realizado com sucesso"
+```
+
+Resposta (me):
+```jsonc
+{
+	"id": number,
+	"email": string,
+	"username": string
+}
 ```
 
 ---
 
 ### Autenticação
 
-Os endpoints de criação, edição, deleção e curtida de posts e comentários exigem um token JWT válido no header:
-
-```
-Authorization: Bearer <token>
-```
+O token JWT é entregue e lido via cookie `auth_token` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Max-Age` = expiração do token), não mais via header `Authorization`. O cookie é setado em `entrar`/`criar-conta` e limpo em `sair`; o navegador o envia automaticamente em toda requisição para a API, sem intervenção do frontend.
 
 Endpoints públicos (sem token necessário):
 - `POST api/v1/auth/entrar`
@@ -293,9 +304,13 @@ Endpoints públicos (sem token necessário):
 - `GET api/v1/posts/retornar-postagens/{userId}`
 - `GET api/v1/comentarios/retornar-comentarios/{postId}`
 
+**CSRF**
+
+Como o cookie é enviado automaticamente pelo navegador em toda requisição (diferente de um Bearer token, que exige JS para ser anexado), os endpoints que alteram estado exigem proteção contra CSRF. `CookieCsrfTokenRepository` expõe o token num cookie legível por JS (`XSRF-TOKEN`); o frontend deve reenviá-lo no header `X-XSRF-TOKEN` a cada requisição mutável (Axios faz isso automaticamente por padrão, já que os nomes de cookie/header coincidem com o default do Axios). `entrar` e `criar-conta` são isentos de CSRF, pois não há sessão/cookie autenticado prévio contra o qual validar.
+
 **Logout / revogação de token**
 
-`POST api/v1/auth/sair` exige um token válido no header `Authorization`. O id do token (`jti`) é adicionado a uma denylist em memória com TTL até o horário de expiração original do token; qualquer requisição subsequente com esse mesmo token passa a receber `401 Unauthorized`, mesmo que ele ainda não tenha expirado. Fazer login novamente gera um token novo (`jti` diferente), não afetado pelo logout anterior.
+`POST api/v1/auth/sair` exige um cookie `auth_token` válido. O id do token (`jti`) é adicionado a uma denylist em memória com TTL até o horário de expiração original do token; qualquer requisição subsequente com esse mesmo token passa a receber `401 Unauthorized`, mesmo que ele ainda não tenha expirado. Fazer login novamente gera um token novo (`jti` diferente), não afetado pelo logout anterior.
 
 A denylist é mantida apenas em memória por instância da aplicação — não persiste a reinícios e não é compartilhada entre múltiplas instâncias.
 
@@ -351,6 +366,11 @@ Erros não tratados diretamente por um endpoint são capturados por um `GlobalEx
 - Contexto: o projeto não tinha Dockerfile, imagem de container nem pipeline de CI/CD — nenhuma forma automatizada de build/validação/publicação existia.
 - Decisão: `Dockerfile` multi-stage (build com `eclipse-temurin:21-jdk-jammy`, runtime com `eclipse-temurin:21-jre-jammy`, usuário non-root, `HEALTHCHECK` via `/api/v1/actuator/health`), `docker-compose.yml` para conveniência local (sem serviço de banco — Postgres permanece externo via Supabase), e dois workflows do GitHub Actions: `ci.yml` (roda testes unitários e build em todo push/PR, excluindo `OpenFeedApplicationTests` por depender de um banco real) e `docker-publish.yml` (builda e publica a imagem no GitHub Container Registry a cada push em `main`, com tags `latest` e SHA curto).
 - Consequência conhecida: assim como o rate limiting e a denylist de tokens, a aplicação deve rodar como instância única — nada aqui pressupõe múltiplas réplicas. `OpenFeedApplicationTests` continua fora do CI até existir um perfil de teste próprio (H2/Testcontainers). O deploy em uma plataforma de hospedagem real ainda é uma decisão em aberto, separada deste trabalho.
+
+**Token JWT em cookie `HttpOnly` (em vez de retornado no corpo)**
+- Contexto: o token era retornado no corpo de `entrar`/`criar-conta` e o frontend o guardava (tipicamente em `localStorage`) para reenviá-lo manualmente no header `Authorization: Bearer <token>`. Qualquer XSS na aplicação frontend conseguiria ler esse token diretamente.
+- Decisão: `entrar`/`criar-conta`/`sair` agora setam/limpam um cookie `auth_token` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Max-Age` = `jwt.expiration`) em vez de devolver o token no JSON; `JwtFilter` passou a ler o token desse cookie. Como o cookie é enviado automaticamente pelo navegador (diferente do header `Authorization`, que exigia JS), CSRF deixou de poder ser ignorado: `SecurityConfig` passou a usar `CookieCsrfTokenRepository` (cookie `XSRF-TOKEN` legível por JS, reenviado no header `X-XSRF-TOKEN` — convenção que o Axios já implementa por padrão), isento apenas em `entrar`/`criar-conta`, que não têm cookie de sessão prévio para validar contra.
+- Consequência conhecida: `cookie.secure` (`COOKIE_SECURE`) precisa ser `false` em desenvolvimento local sobre HTTP puro — em produção (HTTPS) deve ficar `true`, o default. `SameSite=Lax` funciona sem ajustes enquanto frontend e backend estiverem no mesmo *site* (mesmo domínio registrável, portas/subdomínios diferentes tudo bem, como `localhost:5173`/`localhost:8080`); se um dia ficarem em domínios totalmente diferentes, isso precisa virar `SameSite=None` (exige `Secure=true`).
 
 ---
 
