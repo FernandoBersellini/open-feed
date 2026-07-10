@@ -15,11 +15,14 @@ public class JwtCookie {
     @Value("${cookie.secure}")
     private boolean secure;
 
+    @Value("${cookie.same-site}")
+    private String sameSite;
+
     public ResponseCookie build(String token) {
         return ResponseCookie.from(NAME, token)
                 .httpOnly(true)
                 .secure(secure)
-                .sameSite("Lax")
+                .sameSite(sameSite)
                 .path("/")
                 .maxAge(expiration / 1000)
                 .build();
@@ -29,7 +32,7 @@ public class JwtCookie {
         return ResponseCookie.from(NAME, "")
                 .httpOnly(true)
                 .secure(secure)
-                .sameSite("Lax")
+                .sameSite(sameSite)
                 .path("/")
                 .maxAge(0)
                 .build();
