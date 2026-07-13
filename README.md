@@ -1,6 +1,12 @@
 # Openfeed
+![CI](https://github.com/FernandoBersellini/open-feed/actions/workflows/ci.yml/badge.svg)
+![Docker Publish](https://github.com/FernandoBersellini/open-feed/actions/workflows/docker-publish.yml/badge.svg)
 
 App de posts simples.
+
+Acesse em:
+- Frontend: https://openfeed-frontend.vercel.app/
+- API (backend): https://open-feed.fly.dev/api/v1/actuator/health
 
 ## MVP
 
