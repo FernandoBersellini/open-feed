@@ -272,11 +272,12 @@ Resposta (entrar/criar-conta):
 {
 	"id": number,
 	"email": string,
-	"username": string
+	"username": string,
+	"csrfToken": string
 }
 ```
 
-O token JWT não é retornado no corpo — é enviado num cookie `auth_token` (`HttpOnly`, `Secure`, `SameSite=Lax`). Ver [Autenticação](#autenticação).
+O token JWT não é retornado no corpo — é enviado num cookie `auth_token` (`HttpOnly`, `Secure`, `SameSite=None`). Ver [Autenticação](#autenticação). `csrfToken` é o mesmo valor do cookie `XSRF-TOKEN`, entregue também no corpo pelo motivo descrito em [CSRF](#csrf).
 
 Resposta (sair):
 ```jsonc
@@ -288,7 +289,8 @@ Resposta (me):
 {
 	"id": number,
 	"email": string,
-	"username": string
+	"username": string,
+	"csrfToken": string
 }
 ```
 
@@ -296,7 +298,7 @@ Resposta (me):
 
 ### Autenticação
 
-O token JWT é entregue e lido via cookie `auth_token` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Max-Age` = expiração do token), não mais via header `Authorization`. O cookie é setado em `entrar`/`criar-conta` e limpo em `sair`; o navegador o envia automaticamente em toda requisição para a API, sem intervenção do frontend.
+O token JWT é entregue e lido via cookie `auth_token` (`HttpOnly`, `Secure`, `SameSite=None`, `Max-Age` = expiração do token), não mais via header `Authorization`. O cookie é setado em `entrar`/`criar-conta` e limpo em `sair`; o navegador o envia automaticamente em toda a requisição para a API, sem intervenção do frontend. `SameSite=None` (em vez de `Lax`) porque frontend e backend rodam em domínios diferentes em produção (ex.: frontend na Vercel, backend no Fly.io) — cookies cross-site exigem `SameSite=None` + `Secure=true`, configuráveis via `COOKIE_SAME_SITE`/`COOKIE_SECURE`.
 
 Endpoints públicos (sem token necessário):
 - `POST api/v1/auth/entrar`
@@ -307,6 +309,8 @@ Endpoints públicos (sem token necessário):
 **CSRF**
 
 Como o cookie é enviado automaticamente pelo navegador em toda requisição (diferente de um Bearer token, que exige JS para ser anexado), os endpoints que alteram estado exigem proteção contra CSRF. `CookieCsrfTokenRepository` expõe o token num cookie legível por JS (`XSRF-TOKEN`); o frontend deve reenviá-lo no header `X-XSRF-TOKEN` a cada requisição mutável (Axios faz isso automaticamente por padrão, já que os nomes de cookie/header coincidem com o default do Axios). `entrar` e `criar-conta` são isentos de CSRF, pois não há sessão/cookie autenticado prévio contra o qual validar.
+
+Como frontend e backend estão em domínios diferentes (ver acima), o cookie `XSRF-TOKEN` é enviado automaticamente pelo navegador nas requisições para a API, mas **não pode ser lido via `document.cookie`/leitor de cookie do Axios** a partir do JS do frontend — é um cookie de terceiros do ponto de vista da origem do frontend, uma restrição de same-origin do navegador, não contornável no lado do cliente. Por isso `entrar`/`criar-conta`/`me` também devolvem o mesmo valor no corpo da resposta, no campo `csrfToken` (resolvido no controller via injeção de `CsrfToken`, ver `AuthController`/`AuthService`); o frontend guarda esse valor (em memória, não em storage persistente) e o reenvia manualmente no header `X-XSRF-TOKEN`. A validação em si (comparar o header contra o valor esperado) não muda — apenas a forma como o frontend obtém o valor a enviar.
 
 **Logout / revogação de token**
 
@@ -370,7 +374,14 @@ Erros não tratados diretamente por um endpoint são capturados por um `GlobalEx
 **Token JWT em cookie `HttpOnly` (em vez de retornado no corpo)**
 - Contexto: o token era retornado no corpo de `entrar`/`criar-conta` e o frontend o guardava (tipicamente em `localStorage`) para reenviá-lo manualmente no header `Authorization: Bearer <token>`. Qualquer XSS na aplicação frontend conseguiria ler esse token diretamente.
 - Decisão: `entrar`/`criar-conta`/`sair` agora setam/limpam um cookie `auth_token` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Max-Age` = `jwt.expiration`) em vez de devolver o token no JSON; `JwtFilter` passou a ler o token desse cookie. Como o cookie é enviado automaticamente pelo navegador (diferente do header `Authorization`, que exigia JS), CSRF deixou de poder ser ignorado: `SecurityConfig` passou a usar `CookieCsrfTokenRepository` (cookie `XSRF-TOKEN` legível por JS, reenviado no header `X-XSRF-TOKEN` — convenção que o Axios já implementa por padrão), isento apenas em `entrar`/`criar-conta`, que não têm cookie de sessão prévio para validar contra.
-- Consequência conhecida: `cookie.secure` (`COOKIE_SECURE`) precisa ser `false` em desenvolvimento local sobre HTTP puro — em produção (HTTPS) deve ficar `true`, o default. `SameSite=Lax` funciona sem ajustes enquanto frontend e backend estiverem no mesmo *site* (mesmo domínio registrável, portas/subdomínios diferentes tudo bem, como `localhost:5173`/`localhost:8080`); se um dia ficarem em domínios totalmente diferentes, isso precisa virar `SameSite=None` (exige `Secure=true`).
+- Consequência conhecida: `cookie.secure` (`COOKIE_SECURE`) precisa ser `false` em desenvolvimento local sobre HTTP puro — em produção (HTTPS) deve ficar `true`, o default. `cookie.same-site` (`COOKIE_SAME_SITE`) fica `Lax` por padrão (suficiente quando frontend e backend estão no mesmo *site*); em produção, com frontend e backend em domínios totalmente diferentes (Vercel + Fly.io), precisa ser `None`, o que por sua vez exige `Secure=true`.
+
+**Deploy no Fly.io e cookies cross-origin (frontend na Vercel, backend no Fly.io)**
+- Contexto: com o frontend e o backend publicados em domínios diferentes, os cookies `auth_token`/`XSRF-TOKEN` passaram a exigir `SameSite=None` + `Secure=true` para sobreviver a requisições cross-site (ver decisão anterior). Isso expôs dois problemas específicos da topologia de deploy:
+  1. O proxy de borda do Fly.io termina TLS e encaminha as requisições para a aplicação em HTTP puro internamente. Sem avisar o Spring disso, `request.isSecure()` retorna `false` dentro da aplicação, mesmo com o navegador acessando via HTTPS — e `CookieCsrfTokenRepository` deriva o atributo `Secure` do cookie `XSRF-TOKEN` a partir de `request.isSecure()` (o `cookie.secure`/`COOKIE_SECURE` só controla o cookie `auth_token`, via `JwtCookie`). O resultado era um cookie `SameSite=None` sem `Secure` — combinação que o navegador recusa silenciosamente (nem envia, nem persiste), quebrando toda rota mutável com `401 Unauthorized` (a falha de CSRF ocorre antes da autenticação no filtro, então cai no `AuthenticationEntryPoint`, não no `AccessDeniedHandler`).
+  2. Mesmo com o cookie `XSRF-TOKEN` correto, o frontend não consegue lê-lo via JS: por estar no domínio do backend (`open-feed.fly.dev`) e não no da Vercel, é um cookie de terceiros do ponto de vista da página — uma restrição de same-origin do navegador, não contornável no lado do cliente (`document.cookie` e o leitor de cookie do Axios só enxergam cookies da própria origem).
+- Decisão: (1) `server.forward-headers-strategy=framework` em `application.properties`, para que o Spring confie no header `X-Forwarded-Proto` enviado pelo proxy do Fly.io e `request.isSecure()` reflita a conexão real do navegador. (2) `entrar`/`criar-conta`/`me` passaram a devolver o valor do CSRF token também no corpo da resposta (campo `csrfToken`), para o frontend reenviá-lo manualmente no header `X-XSRF-TOKEN` sem depender de ler o cookie. Detalhes em [CSRF](#csrf).
+- Consequência conhecida: a alternativa mais "limpa" seria colocar frontend e backend sob o mesmo domínio registrável (proxy/rewrite na Vercel para a API, ou subdomínios do mesmo domínio) — os cookies voltariam a ser `SameSite=Lax` simples, sem CORS-com-credenciais nem relay de CSRF token. Não foi adotada agora por exigir mudança de infraestrutura maior (roteamento, domínio customizado); vale reconsiderar se o projeto crescer.
 
 ---
 
