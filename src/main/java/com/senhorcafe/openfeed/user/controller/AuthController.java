@@ -7,6 +7,7 @@ import com.senhorcafe.openfeed.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,13 +17,13 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("entrar")
-    public ResponseEntity<?> signIn(@Valid @RequestBody SignInDTO signInDTO) {
-        return authService.signIn(signInDTO);
+    public ResponseEntity<?> signIn(@Valid @RequestBody SignInDTO signInDTO, CsrfToken csrfToken) {
+        return authService.signIn(signInDTO, csrfToken);
     }
 
     @PostMapping("criar-conta")
-    public ResponseEntity<?> signUp(@Valid @RequestBody SignUpDTO signUpDTO) {
-        return authService.signUp(signUpDTO);
+    public ResponseEntity<?> signUp(@Valid @RequestBody SignUpDTO signUpDTO, CsrfToken csrfToken) {
+        return authService.signUp(signUpDTO, csrfToken);
     }
 
     @PostMapping("sair")
@@ -31,7 +32,7 @@ public class AuthController {
     }
 
     @GetMapping("me")
-    public ResponseEntity<?> getCurrentUser() {
-        return authService.retrieveUser();
+    public ResponseEntity<?> getCurrentUser(CsrfToken csrfToken) {
+        return authService.retrieveUser(csrfToken);
     }
 }

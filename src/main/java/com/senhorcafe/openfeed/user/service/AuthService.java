@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -27,7 +28,7 @@ public class AuthService {
     private final TokenDenylist tokenDenylist;
     private final JwtCookie jwtCookie;
 
-    public ResponseEntity<?> signUp(SignUpDTO signUpDTO) {
+    public ResponseEntity<?> signUp(SignUpDTO signUpDTO, CsrfToken csrfToken) {
         if (userRepository.existsByEmail(signUpDTO.email())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Email ja cadastrado");
         }
@@ -49,10 +50,10 @@ public class AuthService {
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.build(token).toString())
-                .body(new AuthResponseDTO(user.getId(), user.getEmail(), user.getUsername()));
+                .body(new AuthResponseDTO(user.getId(), user.getEmail(), user.getUsername(), csrfToken.getToken()));
     }
 
-    public ResponseEntity<?> signIn(SignInDTO signInDTO) {
+    public ResponseEntity<?> signIn(SignInDTO signInDTO, CsrfToken csrfToken) {
         User user = userRepository.findByEmail(signInDTO.email());
 
         if (user == null) {
@@ -66,7 +67,7 @@ public class AuthService {
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getUsername());
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.build(token).toString())
-                .body(new AuthResponseDTO(user.getId(), user.getEmail(), user.getUsername()));
+                .body(new AuthResponseDTO(user.getId(), user.getEmail(), user.getUsername(), csrfToken.getToken()));
     }
 
     public ResponseEntity<String> signOut(String token) {
@@ -76,7 +77,7 @@ public class AuthService {
                 .body("Logout realizado com sucesso");
     }
 
-    public ResponseEntity<?> retrieveUser() {
+    public ResponseEntity<?> retrieveUser(CsrfToken csrfToken) {
         Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Optional<User> user = userRepository.findById(userId);
 
@@ -85,6 +86,6 @@ public class AuthService {
         }
 
         User u = user.get();
-        return ResponseEntity.ok(new AuthResponseDTO(u.getId(), u.getEmail(), u.getUsername()));
+        return ResponseEntity.ok(new AuthResponseDTO(u.getId(), u.getEmail(), u.getUsername(), csrfToken.getToken()));
     }
 }
